@@ -27,6 +27,7 @@ const routes: RouteProps[] = [
   { href: "/events", label: "Events" },
   { href: "/events/upcoming", label: "Upcoming" },
   { href: "/products", label: "Products" },
+  { href: "/events/recruitment", label: "Recruitment" },
 ];
 
 function initials(name?: string, email?: string) {

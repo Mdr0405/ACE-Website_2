@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import type { Product } from "@/lib/products";
@@ -7,9 +10,48 @@ const asOf = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
 
 /** One product, laid out like an award site's project page: name, proof, what it does, the facts. */
-export function ProductSpread({ product, inverted = false }: { product: Product; inverted?: boolean }) {
+// CHANGED: Added `previewImages?: string[]` and automatic 2-second image slideshow rotation for every product spread
+export function ProductSpread({
+  product,
+  inverted = false,
+  previewImage,
+  previewImages,
+}: {
+  product: Product;
+  inverted?: boolean;
+  previewImage?: string;
+  previewImages?: string[];
+}) {
   const id = product.slug;
-  // One inversion panel per page: only the first product's features sit on the inked band.
+
+  const slides =
+    previewImages && previewImages.length > 0
+      ? previewImages
+      : previewImage
+        ? [
+            previewImage,
+            `https://picsum.photos/seed/${product.slug}-site-2/900/500`,
+            `https://picsum.photos/seed/${product.slug}-site-3/900/500`,
+            `https://picsum.photos/seed/${product.slug}-site-4/900/500`,
+          ]
+        : [
+            `https://picsum.photos/seed/${product.slug}-site-1/900/500`,
+            `https://picsum.photos/seed/${product.slug}-site-2/900/500`,
+            `https://picsum.photos/seed/${product.slug}-site-3/900/500`,
+            `https://picsum.photos/seed/${product.slug}-site-4/900/500`,
+          ];
+
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // CHANGED: Cycle to the next image every 2 seconds (2000ms) unless hovered
+  useEffect(() => {
+    if (slides.length <= 1 || isPaused) return;
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [slides.length, isPaused]);
 
   return (
     <article id={id} aria-labelledby={`${id}-name`} className="scroll-mt-24">
@@ -19,7 +61,23 @@ export function ProductSpread({ product, inverted = false }: { product: Product;
           <div className="lg:col-span-8" style={{ containerType: "inline-size" }}>
             {product.icon && (
               <div className="mb-6 inline-block border border-foreground p-1.5">
-                <Image src={product.icon} alt="" width={80} height={80} className="block size-16 object-contain sm:size-20" />
+                {product.icon.startsWith("http") ? (
+                  <img
+                    src={product.icon}
+                    alt=""
+                    width={80}
+                    height={80}
+                    className="block size-16 object-contain sm:size-20"
+                  />
+                ) : (
+                  <Image
+                    src={product.icon}
+                    alt=""
+                    width={80}
+                    height={80}
+                    className="block size-16 object-contain sm:size-20"
+                  />
+                )}
               </div>
             )}
             <h2
@@ -47,7 +105,7 @@ export function ProductSpread({ product, inverted = false }: { product: Product;
                 <div key={stamp.label} className={cn("p-5", i > 0 && "border-l border-foreground")}>
                   <dt className="label text-muted-foreground">{stamp.label}</dt>
                   <dd className="mt-3">
-                    <span className="font-mono text-5xl leading-none tabular">{stamp.value}</span>
+                    <span className="font-mono text-5xl leading-none tabular whitespace-nowrap">{stamp.value}</span>
                     {stamp.suffix && <span className="ml-1.5 font-mono text-sm tabular text-muted-foreground">{stamp.suffix}</span>}
                     {stamp.note && <span className="mt-2 block text-sm text-muted-foreground">{stamp.note}</span>}
                   </dd>
@@ -59,31 +117,106 @@ export function ProductSpread({ product, inverted = false }: { product: Product;
             </p>
 
             <div className="mt-6 grid gap-2">
-              {product.links.map((link, i) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "group inline-flex h-14 w-full items-center justify-between gap-6 px-6 font-semibold transition-[background-color,color,transform] duration-300 focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-ring active:scale-[0.98]",
-                    i === 0
-                      ? "bg-primary text-primary-foreground hover:bg-foreground hover:text-background"
-                      : "border border-foreground/25 hover:bg-foreground hover:text-background"
-                  )}
-                >
-                  <span className="flex min-w-0 items-center">
-                    <span className="truncate">{link.label}</span>
-                    {link.sub && (
-                      <span className="ml-3 hidden shrink-0 border-l border-current pl-3 text-sm font-normal sm:inline">{link.sub}</span>
+              {product.links.map((link, i) => {
+                const isPlaceholder = !link.href || link.href === "#";
+
+                if (isPlaceholder) {
+                  return (
+                    <span
+                      key={`${link.label}-${i}`}
+                      aria-disabled="true"
+                      className="inline-flex h-14 w-full cursor-not-allowed items-center justify-between gap-6 border border-foreground/25 px-6 font-semibold text-muted-foreground opacity-60"
+                    >
+                      <span className="flex min-w-0 items-center">
+                        <span className="truncate">{link.label}</span>
+                        {link.sub && (
+                          <span className="ml-3 hidden shrink-0 border-l border-current pl-3 text-sm font-normal sm:inline">
+                            {link.sub}
+                          </span>
+                        )}
+                      </span>
+                      <ArrowUpRight className="size-5 shrink-0" />
+                    </span>
+                  );
+                }
+
+                return (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "group inline-flex h-14 w-full items-center justify-between gap-6 px-6 font-semibold transition-[background-color,color,transform] duration-300 focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-ring active:scale-[0.98]",
+                      i === 0
+                        ? "bg-primary text-primary-foreground hover:bg-foreground hover:text-background"
+                        : "border border-foreground/25 hover:bg-foreground hover:text-background"
                     )}
-                  </span>
-                  <ArrowUpRight className="size-5 shrink-0 transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1" />
-                </a>
-              ))}
+                  >
+                    <span className="flex min-w-0 items-center">
+                      <span className="truncate">{link.label}</span>
+                      {link.sub && (
+                        <span className="ml-3 hidden shrink-0 border-l border-current pl-3 text-sm font-normal sm:inline">{link.sub}</span>
+                      )}
+                    </span>
+                    <ArrowUpRight className="size-5 shrink-0 transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1" />
+                  </a>
+                );
+              })}
             </div>
           </aside>
         </div>
+
+        {/* CHANGED: Auto-rotating 2-second image carousel with smooth crossfade and slide indicators */}
+        {slides.length > 0 && (
+          <figure data-fade style={{ ["--d" as string]: ".2s" }} className="mt-8 sm:mt-10">
+            <div
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+              className="max-w-xl overflow-hidden border border-foreground bg-zinc-950"
+            >
+              <div className="flex items-center justify-between border-b border-foreground/20 px-3.5 py-2">
+                <div className="flex items-center gap-1.5">
+                  {slides.map((_, dotIdx) => (
+                    <button
+                      key={dotIdx}
+                      type="button"
+                      aria-label={`Show preview slide ${dotIdx + 1}`}
+                      onClick={() => setActiveSlide(dotIdx)}
+                      className={cn(
+                        "h-2 rounded-full transition-all duration-300",
+                        dotIdx === activeSlide
+                          ? "w-5 bg-primary"
+                          : "w-2 bg-foreground/30 hover:bg-foreground/60"
+                      )}
+                    />
+                  ))}
+                </div>
+                <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {product.links[0]?.sub || product.name} ·{" "}
+                  {String(activeSlide + 1).padStart(2, "0")}/
+                  {String(slides.length).padStart(2, "0")}
+                </span>
+              </div>
+              <div className="relative h-56 w-full overflow-hidden bg-zinc-900 sm:h-64">
+                {slides.map((src, idx) => (
+                  <img
+                    key={src}
+                    src={src}
+                    alt={`${product.name} preview ${idx + 1}`}
+                    loading={idx === 0 ? "eager" : "lazy"}
+                    className={cn(
+                      "absolute inset-0 size-full object-cover transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                      idx === activeSlide
+                        ? "scale-100 opacity-100"
+                        : "pointer-events-none scale-[1.03] opacity-0"
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+          </figure>
+        )}
       </div>
 
       {/* What it does: on the inked band for the first product, on the ground for the rest */}
