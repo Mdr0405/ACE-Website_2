@@ -206,10 +206,11 @@ export default function EventDetailClient({ initialEvent, initialParticipants, e
             {event.description || 'No description available yet.'}
           </div>
 
-          {event.organizer_info && (
+          {(event.Cluster || event.organizer_info) && (
             <div className="mt-10 border-t border-border pt-6">
               <p className="label text-muted-foreground">Organised by</p>
-              <p className="mt-3 whitespace-pre-line text-base leading-relaxed">{event.organizer_info}</p>
+              {event.Cluster && <p className="mt-3 text-base leading-relaxed">{event.Cluster}</p>}
+              {event.organizer_info && <p className="mt-3 whitespace-pre-line text-base leading-relaxed">{event.organizer_info}</p>}
             </div>
           )}
 

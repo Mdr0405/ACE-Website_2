@@ -1,10 +1,10 @@
-// lib/admin.ts — server-only helpers for the admin event reports.
-// Every query runs with the admin's own session, so the database's RLS
-// (is_admin()) is the real gate; requireAdmin() just gives a clean 404.
+// Server-only helpers for admin event reports. Queries use the admin's own
+// session and the database enforces the same cluster scope on mutations.
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { Tables } from '@/lib/supabase/database.types';
 import type { TeamMember } from '@/lib/event-display';
+import { resolveAdminCluster } from '@/lib/admin-clusters';
 
 /** Pages through a PostgREST query past the default 1000-row cap. */
 async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
@@ -24,7 +24,15 @@ export async function requireAdmin() {
   if (!auth.user) redirect('/');
   const { data: isAdmin } = await supabase.rpc('is_admin');
   if (isAdmin !== true) notFound();
-  return { supabase, user: auth.user };
+  const { data: admin, error } = await supabase
+    .from('userAdmins')
+    .select('Cluster')
+    .eq('userId', auth.user.id)
+    .maybeSingle();
+  if (error) throw error;
+  const cluster = resolveAdminCluster(admin?.Cluster ?? null);
+  if (!cluster) notFound();
+  return { supabase, user: auth.user, cluster, isCore: cluster === 'Core' };
 }
 
 export type ReportRow = {
@@ -52,10 +60,15 @@ export type EventReport = {
 };
 
 export async function loadEventReport(eventId: string): Promise<EventReport | null> {
-  const { supabase } = await requireAdmin();
+  const { supabase, cluster, isCore } = await requireAdmin();
 
-  const [{ data: event }, regs, emailsRes, teamsRes] = await Promise.all([
-    supabase.from('Event').select('*').eq('id', eventId).maybeSingle(),
+  let eventQuery = supabase.from('Event').select('*').eq('id', eventId);
+  if (!isCore) eventQuery = eventQuery.eq('Cluster', cluster);
+  const { data: event, error: eventError } = await eventQuery.maybeSingle();
+  if (eventError) throw eventError;
+  if (!event) return null;
+
+  const [regs, emailsRes, teamsRes] = await Promise.all([
     fetchAll((from, to) =>
       supabase
         .from('Registration')
@@ -76,8 +89,6 @@ export async function loadEventReport(eventId: string): Promise<EventReport | nu
         .range(from, to)
     ).catch(() => []),
   ]);
-  if (!event) return null;
-
   const ids = regs.map((r) => r.userId);
   const profiles = new Map<string, Pick<Tables<'UserProfile'>, 'id' | 'name' | 'registrationNumber' | 'department' | 'year' | 'contactNumber'>>();
 
@@ -126,12 +137,24 @@ export type EventSummary = Tables<'Event'> & {
 };
 
 export async function loadEventSummaries(): Promise<EventSummary[]> {
-  const { supabase } = await requireAdmin();
-  const [{ data: events, error }, regs] = await Promise.all([
-    supabase.from('Event').select('*').order('startTime', { ascending: false }),
-    fetchAll((from, to) => supabase.from('Registration').select('eventId, attended, paymentStatus').order('id').range(from, to)),
-  ]);
+  const { supabase, cluster, isCore } = await requireAdmin();
+  let eventQuery = supabase.from('Event').select('*').order('startTime', { ascending: false });
+  if (!isCore) eventQuery = eventQuery.eq('Cluster', cluster);
+  const { data: events, error } = await eventQuery;
   if (error) throw error;
+  if (!events?.length) return [];
+
+  const ids = events.map((event) => event.id);
+  const regs = [] as { eventId: string; attended: boolean | null; paymentStatus: Tables<'Registration'>['paymentStatus'] }[];
+  for (let i = 0; i < ids.length; i += 100) {
+    regs.push(...await fetchAll((from, to) =>
+      supabase.from('Registration')
+        .select('eventId, attended, paymentStatus')
+        .in('eventId', ids.slice(i, i + 100))
+        .order('id')
+        .range(from, to)
+    ));
+  }
 
   const tally = new Map<string, { registered: number; attended: number; paid: number }>();
   for (const r of regs) {
@@ -141,5 +164,5 @@ export async function loadEventSummaries(): Promise<EventSummary[]> {
     if (r.paymentStatus === 'completed') t.paid += 1;
     tally.set(r.eventId, t);
   }
-  return (events ?? []).map((e) => ({ ...e, ...(tally.get(e.id) ?? { registered: 0, attended: 0, paid: 0 }) }));
+  return events.map((e) => ({ ...e, ...(tally.get(e.id) ?? { registered: 0, attended: 0, paid: 0 }) }));
 }

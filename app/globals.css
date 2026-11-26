@@ -422,7 +422,7 @@ html.club-cursor :is(input:not([type="checkbox"]):not([type="radio"]):not([type=
 /* What we stand for: each principle charges with ink as it comes into focus */
 .pr-word-row { margin: 0; }
 .pr-word {
-  position: relative; display: inline-block; padding: 0.06em 0; margin: 0;
+  position: relative; display: inline-block; overflow: clip; padding: 0.06em 0; margin: 0;
   background: none; border: 0; text-align: left; color: inherit; font: inherit;
   font-weight: 800; font-stretch: 100%; letter-spacing: -0.04em; line-height: 0.92;
   font-size: clamp(2.25rem, 11vw, 3.5rem);
