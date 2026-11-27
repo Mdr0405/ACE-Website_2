@@ -404,10 +404,11 @@ export default function RegistrationForm({ event, taken, state }: Props) {
             </div>
           )}
 
-          {event.organizer_info && (
+          {(event.Cluster || event.organizer_info) && (
             <div className="mt-8 border-t border-border pt-5">
               <p className="label text-muted-foreground">Organised by</p>
-              <p className="mt-2 whitespace-pre-line leading-relaxed">{event.organizer_info}</p>
+              {event.Cluster && <p className="mt-2 leading-relaxed">{event.Cluster}</p>}
+              {event.organizer_info && <p className="mt-2 whitespace-pre-line leading-relaxed">{event.organizer_info}</p>}
             </div>
           )}
 

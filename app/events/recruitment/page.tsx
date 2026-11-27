@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { useAuth } from "@/components/context/AuthContext";
 import { clusters } from "@/lib/ace-content";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -12,60 +13,57 @@ const domains = [
   {
     title: "Web Development",
     imageUrl: "/images/Clusters/WD.png",
-    applyLink: "https://forms.gle/VoiLdGGHWcHEuMZz6",
+    cluster: "Web Development",
   },
   {
     title: "App Development",
     imageUrl: "/images/Clusters/AD.png",
-    applyLink: "https://forms.gle/T8QCqHtj53VtuWCK8",
+    cluster: "App Development",
   },
   {
     title: "AI ML",
     imageUrl: "/images/Clusters/AIML.png",
-    applyLink:
-      "https://docs.google.com/forms/d/e/1FAIpQLSdsIh-J5g8gahux0vetnP8btHrr-Uy-w252bi9hrevFxQF5ag/viewform",
+    cluster: "AI/ML",
   },
   {
     title: "Cybersecurity",
     imageUrl: "/images/Clusters/cyber.png",
-    applyLink: "https://forms.gle/CrdeYAokUyobELMz7",
+    cluster: "Cybersecurity",
   },
   {
     title: "IOT & Embedded Systems",
     imageUrl: "/images/Clusters/Iot.png",
-    applyLink: "https://forms.gle/NySWLPWnwkpEbbpn6",
+    cluster: "IoT",
   },
   {
     title: "Networks",
     imageUrl: "/images/Clusters/Networks.png",
-    applyLink: "https://forms.gle/AYtQseYYb8G3wzFZA",
+    cluster: "Networks",
   },
   {
     title: "Competitive Programming",
     imageUrl: "/images/Clusters/CP.png",
-    applyLink: "https://forms.gle/Ymaomo2dRwjufQ2d9",
+    cluster: "Competitive Programming",
   },
   {
     title: "OpCon & PR",
     imageUrl: "/images/Clusters/Opcon.png",
-    applyLink: "https://forms.gle/qkGyi8igzVQkmHDCA",
+    cluster: "OpCon & PR",
   },
   {
     title: "Graphic Designing",
     imageUrl: "/images/Clusters/GD.png",
-    applyLink: "https://forms.gle/2xEd5qPZA8fE3fts8",
+    cluster: "Graphic Designing",
   },
   {
     title: "Video Editing",
     imageUrl: "/images/Clusters/video.png",
-    applyLink:
-      "https://docs.google.com/forms/d/e/1FAIpQLSdXtQr45rW2c0Lfvy6gd-Zo8H-7Bb4ds37u8-V8HYUgSdSktg/viewform?usp=publish-editor",
+    cluster: "Video Editing",
   },
   {
     title: "Content Writing",
     imageUrl: "/images/Clusters/CW.png",
-    applyLink:
-      "https://docs.google.com/forms/d/e/1FAIpQLSdv9-m-W8LBj4PVtXjWDWh8JBpZ2cSNgrXD6Gwm6zAsNF3KRg/viewform?usp=publish-editor",
+    cluster: "Content Writing",
   },
 ].map((d) => ({
   ...d,
@@ -92,9 +90,19 @@ const BUTTON_CUT =
  * ring), and a tick rail below shows which card you are on and lets you jump.
  */
 export default function RecruitPage() {
+  const { supabase } = useAuth();
   const listRef = useRef<HTMLUListElement>(null);
   // Index of the centred card in the phone deck. null on larger screens.
   const [active, setActive] = useState<number | null>(null);
+  const [formStatus, setFormStatus] = useState<Record<string, boolean> | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    supabase.from('RecruitmentForm').select('Cluster, isOpen').then(({ data }) => {
+      if (current && data) setFormStatus(Object.fromEntries(data.map((form) => [form.Cluster, form.isOpen])));
+    });
+    return () => { current = false; };
+  }, [supabase]);
 
   useEffect(() => {
     const list = listRef.current;
@@ -181,7 +189,7 @@ export default function RecruitPage() {
 
       <PageHeader
         title="Recruitment"
-        description={`ACE Club Recruitment Drive 2026. ${domains.length} clusters are open, each with its own application form. Pick one and apply.`}
+        description={`ACE Club Recruitment Drive 2026. ${domains.length} clusters have ACE application forms. Pick one to check availability and apply.`}
       />
 
       {/* About ACE: why join, what you get, how to choose a cluster */}
@@ -250,7 +258,9 @@ export default function RecruitPage() {
           <span className="sm:hidden">Swipe to select</span>
           <span className="hidden sm:inline">Select a cluster</span>
         </span>
-        <span className="tabular">{pad(domains.length)} available</span>
+        <span className="tabular">
+          {formStatus ? `${pad(domains.filter((domain) => formStatus[domain.cluster]).length)} open` : 'Checking forms'}
+        </span>
       </div>
 
       {/* Phone only: cluster names to jump to a card. The current one is highlighted. */}
@@ -337,17 +347,17 @@ export default function RecruitPage() {
 
                   {/* Cut-corner split button with a light sheen on hover */}
                   <Link
-                    href={d.applyLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Click to apply for ${d.title} (opens in a new tab)`}
+                    href={`/events/recruitment/apply?cluster=${encodeURIComponent(d.cluster)}`}
+                    aria-label={formStatus?.[d.cluster] === false ? `View ${d.title} application status` : `Apply for ${d.title}`}
                     className={`${BUTTON_CUT} group/apply relative mt-8 inline-flex h-12 w-fit items-stretch overflow-hidden bg-primary font-semibold text-primary-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:bg-foreground focus-visible:text-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
                   >
                     <span
                       aria-hidden
                       className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-white/40 opacity-0 group-hover/apply:animate-[rc-sheen_0.9s_ease-out] group-hover/apply:opacity-100 motion-reduce:hidden"
                     />
-                    <span className="relative flex items-center px-5">Click to apply</span>
+                    <span className="relative flex items-center px-5">
+                      {formStatus?.[d.cluster] === false ? 'Applications closed' : 'Apply on ACE'}
+                    </span>
                     <span className="relative flex w-12 items-center justify-center border-l border-current/30">
                       <ArrowUpRight className="size-5 transition-transform duration-200 group-hover/apply:-translate-y-0.5 group-hover/apply:translate-x-0.5" />
                     </span>

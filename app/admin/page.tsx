@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, Plus } from 'lucide-react';
-import { loadEventSummaries, type EventSummary } from '@/lib/admin';
+import { loadEventSummaries, requireAdmin, type EventSummary } from '@/lib/admin';
+import { resolveEventCluster } from '@/lib/admin-clusters';
 import { EVENT_TYPE_NAME, feeOf, formatDay, formatTime, participationLabel } from '@/lib/event-display';
 
 const GROUPS: { status: EventSummary['status']; title: string; empty: string }[] = [
@@ -11,6 +12,7 @@ const GROUPS: { status: EventSummary['status']; title: string; empty: string }[]
 ];
 
 export default async function AdminEventsPage() {
+  const { cluster, isCore } = await requireAdmin();
   const events = await loadEventSummaries();
   const open = events.filter((e) => e.status === 'OPEN');
   const openRegistered = open.reduce((n, e) => n + e.registered, 0);
@@ -19,7 +21,7 @@ export default async function AdminEventsPage() {
     <>
       <header className="grid gap-4 border-b border-border pb-8 lg:grid-cols-12 lg:items-end">
         <h1 className="text-[2.5rem] font-extrabold leading-[0.95] tracking-[-0.04em] [font-stretch:110%] sm:text-6xl lg:col-span-8">
-          Event registrations
+          {isCore ? 'Event registrations' : `${cluster} events`}
         </h1>
         <div className="lg:col-span-4">
         <p className="text-muted-foreground">
@@ -33,12 +35,12 @@ export default async function AdminEventsPage() {
             'Open an event for its full report, check-in and export.'
           )}
         </p>
-        <Link
+        {(isCore || resolveEventCluster(cluster)) && <Link
           href="/admin/events/new"
           className="group mt-5 inline-flex h-12 items-center gap-3 bg-primary px-5 font-semibold text-primary-foreground transition-colors hover:bg-foreground hover:text-background"
         >
           <Plus className="size-5" /> New event
-        </Link>
+        </Link>}
         </div>
       </header>
 

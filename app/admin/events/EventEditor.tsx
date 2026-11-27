@@ -9,6 +9,7 @@ import { ArrowLeft, ImagePlus, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/components/context/AuthContext';
 import type { Tables, TablesInsert } from '@/lib/supabase/database.types';
 import { EVENT_STATUS_NAME, EVENT_TYPE_NAME, TEAM_SIZE_OPTIONS, participationLabel, posterUrl } from '@/lib/event-display';
+import { EVENT_CLUSTERS, resolveEventCluster, type AdminCluster, type EventCluster } from '@/lib/admin-clusters';
 import { cn } from '@/lib/utils';
 
 type Event = Tables<'Event'>;
@@ -24,11 +25,12 @@ const MAX_POSTER_BYTES = 5 * 1024 * 1024;
 
 interface Props {
   event?: Event;
+  adminCluster: AdminCluster;
   /** Registrations already taken; participation can't change once anyone has registered. */
   registrationCount?: number;
 }
 
-export default function EventEditor({ event, registrationCount = 0 }: Props) {
+export default function EventEditor({ event, adminCluster, registrationCount = 0 }: Props) {
   const { supabase } = useAuth();
   const router = useRouter();
   const uid = useId();
@@ -42,7 +44,9 @@ export default function EventEditor({ event, registrationCount = 0 }: Props) {
   const [end, setEnd] = useState(toIstInput(event?.endTime));
   const [location, setLocation] = useState(event?.location ?? '');
   const [description, setDescription] = useState(event?.description ?? '');
-  const [organizer, setOrganizer] = useState(event?.organizer_info ?? '');
+  const [cluster, setCluster] = useState<EventCluster | ''>(
+    resolveEventCluster(event?.Cluster ?? null) ?? (adminCluster === 'Core' ? '' : resolveEventCluster(adminCluster) ?? '')
+  );
   const [mode, setMode] = useState<Mode>((event?.participationMode as Mode) ?? 'INDIVIDUAL');
   const [teamSizes, setTeamSizes] = useState<number[]>(event?.teamSizes?.length ? [...event.teamSizes] : [2, 3, 4]);
   const [capacity, setCapacity] = useState(event?.maxCapacity != null ? String(event.maxCapacity) : '');
@@ -64,11 +68,13 @@ export default function EventEditor({ event, registrationCount = 0 }: Props) {
     if (start && end && fromIstInput(end) <= fromIstInput(start)) e.end = 'End must be after the start.';
     if (!location.trim()) e.location = 'Add the venue, or “To be announced”.';
     if (!description.trim()) e.description = 'Describe the event so members know what they’re signing up for.';
+    if (!cluster) e.cluster = 'Choose the organising cluster.';
+    else if (adminCluster !== 'Core' && cluster !== adminCluster) e.cluster = 'Choose your own cluster.';
     if (mode === 'TEAM' && teamSizes.length === 0) e.teamSizes = 'Pick at least one team size.';
     if (capacity && !(Number.isInteger(Number(capacity)) && Number(capacity) > 0)) e.capacity = 'Use a whole number above 0, or leave it empty.';
     if (paidEvent && !(Number(fee) > 0)) e.fee = 'Enter the fee in rupees.';
     return e;
-  }, [name, start, end, location, description, mode, teamSizes, capacity, paidEvent, fee]);
+  }, [name, start, end, location, description, cluster, adminCluster, mode, teamSizes, capacity, paidEvent, fee]);
   const show = (k: string) => (attempted ? errors[k] : undefined);
 
   function pickFile(f: File | undefined) {
@@ -106,6 +112,7 @@ export default function EventEditor({ event, registrationCount = 0 }: Props) {
       }
 
       const payload: TablesInsert<'Event'> = {
+        Cluster: cluster || null,
         name: name.trim(),
         type,
         status,
@@ -113,7 +120,6 @@ export default function EventEditor({ event, registrationCount = 0 }: Props) {
         endTime: end ? fromIstInput(end) : null,
         location: location.trim(),
         description: description.trim(),
-        organizer_info: organizer.trim() || null,
         imgUrl: img,
         maxCapacity: capacity ? Number(capacity) : null,
         isFeeRequired: paidEvent,
@@ -126,6 +132,9 @@ export default function EventEditor({ event, registrationCount = 0 }: Props) {
         ? await supabase.from('Event').update(payload).eq('id', event!.id).select('id').single()
         : await supabase.from('Event').insert(payload).select('id').single();
       if (dbErr) {
+        if (/Cluster/.test(dbErr.message)) {
+          throw new Error('The event cluster database migration has not been applied yet.');
+        }
         if (/participationMode|teamSizes/.test(dbErr.message)) {
           throw new Error('The database doesn’t have team registration yet. Apply migration 20261120130000_team_registration.sql, then save again.');
         }
@@ -175,8 +184,21 @@ export default function EventEditor({ event, registrationCount = 0 }: Props) {
         <Field id={`${uid}-desc`} label="Description" error={show('description')} hint="Line breaks are kept.">
           {(p) => <textarea {...p} rows={6} value={description} onChange={(e) => setDescription(e.target.value)} className={cn(inputCls(!!show('description')), 'mt-2 resize-y border px-3 py-2.5 text-base leading-relaxed')} />}
         </Field>
-        <Field id={`${uid}-org`} label="Organised by" hint="Cluster and contact people, one per line.">
-          {(p) => <textarea {...p} rows={3} value={organizer} onChange={(e) => setOrganizer(e.target.value)} className={cn(inputCls(false), 'mt-2 resize-y border px-3 py-2.5 text-base leading-relaxed')} />}
+        <Field id={`${uid}-cluster`} label="Organised by" error={show('cluster')} hint={adminCluster === 'Core' ? 'Choose the cluster running this event.' : 'Your admin access is limited to this cluster.'}>
+          {(p) => (
+            <select
+              {...p}
+              value={cluster}
+              onChange={(e) => setCluster(e.target.value as EventCluster)}
+              disabled={adminCluster !== 'Core'}
+              className={cn(inputCls(!!show('cluster')), 'cursor-pointer disabled:cursor-default disabled:opacity-70')}
+            >
+              {adminCluster === 'Core' && <option value="">Choose a cluster</option>}
+              {(adminCluster === 'Core' ? EVENT_CLUSTERS : [resolveEventCluster(adminCluster)].filter((name): name is EventCluster => name !== null)).map((name) => (
+                <option key={name} value={name} className="bg-background">{name}</option>
+              ))}
+            </select>
+          )}
         </Field>
       </Section>
 

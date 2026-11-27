@@ -35,6 +35,7 @@ export type Database = {
       }
       Event: {
         Row: {
+          Cluster: string | null
           currentRegistrations: number | null
           description: string
           endTime: string | null
@@ -53,6 +54,7 @@ export type Database = {
           type: Database["public"]["Enums"]["EventType"]
         }
         Insert: {
+          Cluster?: string | null
           currentRegistrations?: number | null
           description: string
           endTime?: string | null
@@ -71,6 +73,7 @@ export type Database = {
           type: Database["public"]["Enums"]["EventType"]
         }
         Update: {
+          Cluster?: string | null
           currentRegistrations?: number | null
           description?: string
           endTime?: string | null
@@ -89,6 +92,74 @@ export type Database = {
           type?: Database["public"]["Enums"]["EventType"]
         }
         Relationships: []
+      }
+      RecruitmentForm: {
+        Row: {
+          Cluster: string
+          title: string
+          description: string
+          nameLabel: string
+          courseLabel: string
+          yearLabel: string
+          isOpen: boolean
+          updatedAt: string
+        }
+        Insert: {
+          Cluster: string
+          title: string
+          description: string
+          nameLabel?: string
+          courseLabel?: string
+          yearLabel?: string
+          isOpen?: boolean
+          updatedAt?: string
+        }
+        Update: {
+          Cluster?: string
+          title?: string
+          description?: string
+          nameLabel?: string
+          courseLabel?: string
+          yearLabel?: string
+          isOpen?: boolean
+          updatedAt?: string
+        }
+        Relationships: []
+      }
+      RecruitmentApplication: {
+        Row: {
+          id: string
+          Cluster: string
+          fullName: string
+          course: string
+          year: number
+          submittedAt: string
+        }
+        Insert: {
+          id?: string
+          Cluster: string
+          fullName: string
+          course: string
+          year: number
+          submittedAt?: string
+        }
+        Update: {
+          id?: string
+          Cluster?: string
+          fullName?: string
+          course?: string
+          year?: number
+          submittedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "RecruitmentApplication_Cluster_fkey"
+            columns: ["Cluster"]
+            isOneToOne: false
+            referencedRelation: "RecruitmentForm"
+            referencedColumns: ["Cluster"]
+          },
+        ]
       }
       Registration: {
         Row: {
@@ -178,14 +249,17 @@ export type Database = {
       }
       userAdmins: {
         Row: {
+          Cluster: string | null
           isAdmin: boolean
           userId: string
         }
         Insert: {
+          Cluster?: string | null
           isAdmin?: boolean
           userId: string
         }
         Update: {
+          Cluster?: string | null
           isAdmin?: boolean
           userId?: string
         }

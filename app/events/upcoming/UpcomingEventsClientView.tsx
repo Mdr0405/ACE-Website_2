@@ -114,10 +114,12 @@ const UpcomingEventItem = ({ event, mine }: { event: SupabaseEvent; mine?: MyReg
                 <dd className="mt-1 font-mono font-semibold tabular">₹{event.registrationFee}</dd>
               </div>
             ) : null}
-            {event.organizer_info && (
+            {(event.Cluster || event.organizer_info) && (
               <div className="col-span-2">
                 <dt className="label text-muted-foreground">Led by</dt>
-                <dd className="mt-1 whitespace-pre-line text-muted-foreground">{event.organizer_info}</dd>
+                <dd className="mt-1 whitespace-pre-line text-muted-foreground">
+                  {[event.Cluster, event.organizer_info].filter(Boolean).join('\n')}
+                </dd>
               </div>
             )}
           </dl>

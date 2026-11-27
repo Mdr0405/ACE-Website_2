@@ -30,6 +30,11 @@ const routes: RouteProps[] = [
   { href: "/events/recruitment", label: "Recruitment" },
 ];
 
+const adminRoutes: RouteProps[] = [
+  { href: "/admin", label: "Events" },
+  { href: "/admin/recruitment", label: "Recruitment" },
+];
+
 function initials(name?: string, email?: string) {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -39,6 +44,8 @@ function initials(name?: string, email?: string) {
 
 export const Navbar = () => {
   const pathname = usePathname();
+  const onAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
+  const visibleRoutes = onAdminPage ? adminRoutes : routes;
   const { user, loading, isAdmin, login, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -77,7 +84,9 @@ export const Navbar = () => {
   }, [open]);
 
   const isActive = (href: string) =>
-    href === "/events" ? pathname === "/events" || /^\/events\/(?!upcoming|recruitment)/.test(pathname) : pathname.startsWith(href);
+    href === "/admin" ? pathname === "/admin" || pathname.startsWith("/admin/events/")
+      : href === "/events" ? pathname === "/events" || /^\/events\/(?!upcoming|recruitment)/.test(pathname)
+      : pathname.startsWith(href);
 
   const authControl = () => {
     if (loading) {
@@ -162,7 +171,7 @@ export const Navbar = () => {
 
           <nav aria-label="Main" className="hidden lg:block">
             <ul className="flex items-center gap-1">
-              {routes.map((r) => (
+              {visibleRoutes.map((r) => (
                 <li key={r.href}>
                   <Link
                     href={r.href}
@@ -227,17 +236,17 @@ export const Navbar = () => {
       >
         <nav aria-label="Mobile">
           <ul className="border-t border-border">
-            {[{ href: "/", label: "Home" }, ...routes, ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : [])].map((r, i) => (
+            {(onAdminPage ? visibleRoutes : [{ href: "/", label: "Home" }, ...visibleRoutes, ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : [])]).map((r, i) => (
               <li key={r.href} className="overflow-hidden border-b border-border">
                 <Link
                   href={r.href}
                   onClick={() => setOpen(false)}
-                  aria-current={pathname === r.href ? "page" : undefined}
+                  aria-current={isActive(r.href) ? "page" : undefined}
                   style={{ transitionDelay: open ? `${0.12 + i * 0.05}s` : "0s" }}
                   className={cn(
                     "flex items-center justify-between py-4 text-[clamp(2.25rem,11vw,3.5rem)] font-bold leading-none tracking-[-0.04em] transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] [font-stretch:110%]",
                     open ? "translate-y-0" : "translate-y-full",
-                    pathname === r.href && "text-primary"
+                    isActive(r.href) && "text-primary"
                   )}
                 >
                   {r.label}

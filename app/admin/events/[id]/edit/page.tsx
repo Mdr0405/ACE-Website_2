@@ -10,11 +10,12 @@ interface Props {
 export default async function EditEventPage({ params }: Props) {
   const { id } = await params;
   if (!isUuid(id)) notFound();
-  const { supabase } = await requireAdmin();
-  const [{ data: event }, { count }] = await Promise.all([
-    supabase.from('Event').select('*').eq('id', id).maybeSingle(),
-    supabase.from('Registration').select('id', { count: 'exact', head: true }).eq('eventId', id),
-  ]);
+  const { supabase, cluster, isCore } = await requireAdmin();
+  let eventQuery = supabase.from('Event').select('*').eq('id', id);
+  if (!isCore) eventQuery = eventQuery.eq('Cluster', cluster);
+  const { data: event, error } = await eventQuery.maybeSingle();
+  if (error) throw error;
   if (!event) notFound();
-  return <EventEditor event={event} registrationCount={count ?? 0} />;
+  const { count } = await supabase.from('Registration').select('id', { count: 'exact', head: true }).eq('eventId', id);
+  return <EventEditor event={event} adminCluster={cluster} registrationCount={count ?? 0} />;
 }

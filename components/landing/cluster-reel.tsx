@@ -13,10 +13,9 @@ const EXPO = "ease-[cubic-bezier(0.16,1,0.3,1)]";
 /**
  * The cluster reel on the blue field.
  *
- * Desktop with motion: the section pins and vertical scroll drives a horizontal
- * track. The headline is the first frame, eleven cluster panels follow, and the
- * recruitment slab closes the reel. Phones, tablets and reduced motion get a native
- * horizontal swipe track with snap points instead. Content is identical in both.
+ * With motion, the section pins and vertical scroll drives a horizontal track
+ * at every screen size. Reduced motion gets a native swipe track with snap points.
+ * The headline is the first frame, followed by the clusters and recruitment.
  */
 export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNode }) {
   const pinRef = useRef<HTMLDivElement>(null);
@@ -31,9 +30,9 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
   const [hover, setHover] = useState<number | null>(null);
   const lit = hover ?? active;
 
-  // Pinned mode only where it helps: wide screens with motion allowed.
+  // Keep the vertical-to-horizontal scroll on phones too.
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px) and (prefers-reduced-motion: no-preference)");
+    const mq = window.matchMedia("(prefers-reduced-motion: no-preference)");
     const sync = () => setPin(mq.matches);
     sync();
     mq.addEventListener("change", sync);
@@ -136,14 +135,14 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
     <div ref={pinRef} className="relative">
       <div
         ref={stageRef}
-        className={pin ? "sticky top-0 flex h-svh flex-col overflow-clip pt-24 pb-8" : "relative"}
+        className={pin ? "sticky top-0 flex h-svh flex-col overflow-clip pt-20 pb-4 sm:pt-24 sm:pb-6 lg:pb-8" : "relative py-16 sm:py-24"}
       >
         <div
           ref={moveRef}
           className={pin ? "flex min-h-0 flex-1 items-stretch will-change-transform" : ""}
         >
           {/* Frame one: the headline */}
-          <div className={pin ? "flex w-[min(58vw,60rem)] shrink-0 flex-col justify-between pl-8 pr-16 xl:pl-[max(2rem,calc((100vw-1600px)/2+2rem))]" : "mx-auto mb-14 max-w-[1600px] px-5 sm:mb-16 sm:px-8"}>
+          <div className={pin ? "flex w-screen shrink-0 flex-col justify-between px-5 sm:px-8 lg:w-[min(58vw,60rem)] lg:pl-8 lg:pr-16 xl:pl-[max(2rem,calc((100vw-1600px)/2+2rem))]" : "mx-auto mb-14 max-w-[1600px] px-5 sm:mb-16 sm:px-8"}>
             {intro}
           </div>
 
@@ -163,7 +162,7 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
                   key={it.title}
                   data-panel
                   className={`relative shrink-0 snap-start border-l border-signal-foreground/30 ${
-                    pin ? "w-[clamp(19rem,25vw,27rem)]" : "w-[82vw] max-w-[24rem] sm:w-[22rem]"
+                    pin ? "w-[82vw] max-w-[24rem] lg:w-[clamp(19rem,25vw,27rem)] lg:max-w-none" : "w-[82vw] max-w-[24rem] sm:w-[22rem]"
                   }`}
                 >
                   <Link
@@ -176,7 +175,7 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
                       if (pin && e.currentTarget.matches(":focus-visible")) goTo(i);
                     }}
                     onBlur={() => setHover(null)}
-                    className="group relative flex h-full flex-col overflow-hidden px-5 pb-6 pt-5 outline-offset-[-3px] focus-visible:outline-2 focus-visible:outline-signal-foreground lg:px-7 lg:pb-8"
+                    className="group relative flex h-full flex-col overflow-hidden px-4 pb-4 pt-4 outline-offset-[-3px] focus-visible:outline-2 focus-visible:outline-signal-foreground sm:px-5 sm:pb-6 sm:pt-5 lg:px-7 lg:pb-8"
                   >
                     {/* Ink wipe: the panel inverts on hover and focus */}
                     <span
@@ -191,7 +190,7 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
                     </div>
 
                     <div
-                      className={`relative my-6 transition-[opacity,transform,color] duration-700 ${EXPO} ${
+                      className={`relative my-3 transition-[opacity,transform,color] duration-700 sm:my-6 ${EXPO} ${
                         pin ? "flex min-h-0 flex-1 items-center justify-center" : "aspect-square"
                       } ${pin && !on ? "scale-[0.94] opacity-40" : "opacity-100"} group-hover:scale-100 group-hover:text-signal group-hover:opacity-100 group-focus-visible:text-signal`}
                     >
@@ -205,12 +204,12 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
                     </div>
 
                     <div className="relative transition-colors duration-500 group-hover:text-signal group-focus-visible:text-signal">
-                      <h3 className="text-[clamp(1.75rem,2.5vw,2.75rem)] font-bold leading-[0.95] tracking-[-0.04em] [font-stretch:110%] [text-wrap:balance]">
+                      <h3 className="text-[clamp(1.5rem,6vw,2.75rem)] font-bold leading-[0.95] tracking-[-0.04em] [font-stretch:110%] [text-wrap:balance] lg:text-[clamp(1.75rem,2.5vw,2.75rem)]">
                         <span className={`inline-block transition-transform duration-700 ${EXPO} group-hover:translate-x-2`}>
                           {it.title}
                         </span>
                       </h3>
-                      <p className="mt-3 max-w-[34ch] text-[0.95rem] leading-snug">
+                      <p className="mt-2 max-w-[34ch] text-sm leading-snug sm:mt-3 sm:text-[0.95rem]">
                         {firstSentence(it.description)}
                       </p>
                     </div>
@@ -222,12 +221,12 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
             {/* Closing frame: the recruitment slab */}
             <li
               className={`relative shrink-0 snap-start ${
-                pin ? "w-[clamp(22rem,34vw,36rem)] pl-8 pr-8 xl:pr-[max(2rem,calc((100vw-1600px)/2+2rem))]" : "w-[82vw] max-w-[24rem] sm:w-[22rem]"
+                pin ? "w-[82vw] max-w-[24rem] px-3 lg:w-[clamp(22rem,34vw,36rem)] lg:max-w-none lg:px-8 xl:pr-[max(2rem,calc((100vw-1600px)/2+2rem))]" : "w-[82vw] max-w-[24rem] sm:w-[22rem]"
               }`}
             >
               <Link
                 href="/events/recruitment"
-                className="group flex h-full min-h-[22rem] flex-col justify-between bg-signal-foreground p-6 text-signal transition-colors duration-500 hover:bg-white hover:text-signal-foreground focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-signal-foreground lg:p-8"
+                className="group flex h-full min-h-[18rem] flex-col justify-between bg-signal-foreground p-4 text-signal transition-colors duration-500 hover:bg-white hover:text-signal-foreground focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-signal-foreground sm:p-6 lg:min-h-[22rem] lg:p-8"
               >
                 <span className="font-mono text-xs tabular tracking-[0.06em]" aria-hidden="true">
                   {pad(items.length)} / {pad(items.length)}
@@ -238,7 +237,7 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
                     <br />
                     yours?
                   </span>
-                  <span className="mt-6 flex items-center justify-between border-t border-current/30 pt-5 text-lg font-semibold">
+                  <span className="mt-4 flex items-center justify-between border-t border-current/30 pt-4 text-base font-semibold sm:mt-6 sm:pt-5 sm:text-lg">
                     Apply in recruitment
                     <ArrowRight className={`size-6 transition-transform duration-500 ${EXPO} group-hover:translate-x-1.5`} />
                   </span>
@@ -249,7 +248,7 @@ export function ClusterReel({ items, intro }: { items: Cluster[]; intro: ReactNo
         </div>
 
         {/* Index rail: position, the cluster in view, and a jump to any cluster */}
-        <div className={`mx-auto mt-8 w-full max-w-[1600px] px-5 sm:px-8 ${pin ? "mt-6" : ""}`}>
+        <div className={`mx-auto mt-8 w-full max-w-[1600px] px-5 sm:px-8 ${pin ? "mt-3 sm:mt-6" : ""}`}>
           <div className="grid grid-cols-1 items-center gap-x-8 gap-y-1 border-t border-signal-foreground/30 pt-3 sm:grid-cols-[minmax(0,16rem)_1fr]">
             <p className="flex items-baseline gap-4 overflow-hidden whitespace-nowrap">
               <span className="font-mono text-sm tabular tracking-[0.06em]" aria-hidden="true">
