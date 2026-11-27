@@ -6,6 +6,7 @@ create table if not exists public."RecruitmentForm" (
   title text not null,
   description text not null,
   "nameLabel" text not null default 'Full name',
+  "registrationLabel" text not null default 'Registration number',
   "courseLabel" text not null default 'Course',
   "yearLabel" text not null default 'Year of study',
   "isOpen" boolean not null default true,
@@ -14,6 +15,7 @@ create table if not exists public."RecruitmentForm" (
   constraint "RecruitmentForm_description_length" check (char_length(btrim(description)) between 1 and 500),
   constraint "RecruitmentForm_labels_length" check (
     char_length(btrim("nameLabel")) between 1 and 80
+    and char_length(btrim("registrationLabel")) between 1 and 80
     and char_length(btrim("courseLabel")) between 1 and 80
     and char_length(btrim("yearLabel")) between 1 and 80
   )
@@ -38,10 +40,12 @@ create table if not exists public."RecruitmentApplication" (
   id uuid primary key default gen_random_uuid(),
   "Cluster" text not null references public."RecruitmentForm"("Cluster"),
   "fullName" text not null,
+  "registrationNumber" text not null,
   course text not null,
   year smallint not null,
   "submittedAt" timestamptz not null default now(),
   constraint "RecruitmentApplication_name_length" check (char_length(btrim("fullName")) between 2 and 120),
+  constraint "RecruitmentApplication_reg_length" check (char_length(btrim("registrationNumber")) between 4 and 32),
   constraint "RecruitmentApplication_course_check" check (course in (
     'CSE', 'CSE-AI', 'IT', 'CSE-CYBER', 'CSE-IOT', 'ICT', 'OTHER'
   )),

@@ -99,6 +99,7 @@ export type Database = {
           title: string
           description: string
           nameLabel: string
+          registrationLabel: string
           courseLabel: string
           yearLabel: string
           isOpen: boolean
@@ -109,6 +110,7 @@ export type Database = {
           title: string
           description: string
           nameLabel?: string
+          registrationLabel?: string
           courseLabel?: string
           yearLabel?: string
           isOpen?: boolean
@@ -119,6 +121,7 @@ export type Database = {
           title?: string
           description?: string
           nameLabel?: string
+          registrationLabel?: string
           courseLabel?: string
           yearLabel?: string
           isOpen?: boolean
@@ -131,6 +134,7 @@ export type Database = {
           id: string
           Cluster: string
           fullName: string
+          registrationNumber: string
           course: string
           year: number
           submittedAt: string
@@ -139,6 +143,7 @@ export type Database = {
           id?: string
           Cluster: string
           fullName: string
+          registrationNumber: string
           course: string
           year: number
           submittedAt?: string
@@ -147,6 +152,7 @@ export type Database = {
           id?: string
           Cluster?: string
           fullName?: string
+          registrationNumber?: string
           course?: string
           year?: number
           submittedAt?: string
