@@ -25,11 +25,18 @@ export default function ApplicationForm({ form }: { form: Tables<'RecruitmentFor
   }
 
   return (
-    <form action={action} className="space-y-8 py-10">
+    <form action={action} onSubmit = {(event) => {
+      const submit = Object.fromEntries(new FormData(event.currentTarget))
+      console.log(submit)
+    }}className="space-y-8 py-10">
       <input type="hidden" name="cluster" value={form.Cluster} />
       <div>
         <label htmlFor="application-name" className="font-semibold">{form.nameLabel}</label>
         <input id="application-name" name="fullName" type="text" autoComplete="name" required maxLength={120} className={inputClass} />
+      </div>
+      <div>
+        <label htmlFor="application-registration" className="font-semibold">Registration number</label>
+        <input id="application-registration" name="registrationNumber" type="text" autoComplete="off" required maxLength={9} className={inputClass} />
       </div>
       <div>
         <label htmlFor="application-course" className="font-semibold">{form.courseLabel}</label>
