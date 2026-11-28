@@ -6,28 +6,57 @@ import { resolveRecruitmentCluster } from '@/lib/recruitment';
 
 export type FormSaveState = { error: string | null; saved: boolean };
 
+const fail = (error: string): FormSaveState => ({ error, saved: false });
+
 export async function saveRecruitmentForm(
   _previous: FormSaveState,
   formData: FormData
 ): Promise<FormSaveState> {
   const requested = resolveRecruitmentCluster(String(formData.get('cluster') ?? ''));
   const { supabase, cluster, isCore } = await requireAdmin();
-  if (!requested || (!isCore && requested !== cluster)) return { error: 'This form is not available to your admin account.', saved: false };
-
-  const title = String(formData.get('title') ?? '').trim();
-  const description = String(formData.get('description') ?? '').trim();
-  const nameLabel = String(formData.get('nameLabel') ?? '').trim();
-  const courseLabel = String(formData.get('courseLabel') ?? '').trim();
-  const yearLabel = String(formData.get('yearLabel') ?? '').trim();
-  if (!title || title.length > 120 || !description || description.length > 500 ||
-      [nameLabel, courseLabel, yearLabel].some((label) => !label || label.length > 80)) {
-    return { error: 'Complete the title, description, and three question labels within their limits.', saved: false };
+  if (!requested || (!isCore && requested !== resolveRecruitmentCluster(cluster))) {
+    return fail('This form is not available to your admin account.');
   }
 
+  let input: unknown;
+  try {
+    input = JSON.parse(String(formData.get('questions') ?? '[]'));
+  } catch {
+    return fail('Invalid questions data.');
+  }
+  if (!Array.isArray(input)) return fail('Invalid questions data.');
+  if (input.length > 30) return fail('Maximum 30 questions.');
+
+  const seen = new Set<string>();
+  const questions: { id: string; label: string; type: 'text'; required: boolean; placeholder?: string }[] = [];
+
+  for (const raw of input) {
+    const q = (raw ?? {}) as Record<string, unknown>;
+    const id = typeof q.id === 'string' ? q.id : '';
+    const label = typeof q.label === 'string' ? q.label.trim() : '';
+    const placeholder = typeof q.placeholder === 'string' ? q.placeholder.trim() : '';
+
+    if (!/^[a-z0-9_]{1,40}$/.test(id)) return fail('A question has an invalid id.');
+    if (seen.has(id)) return fail('Duplicate question id.');
+    if (!label || label.length > 200) return fail('Every question needs text (max 200 characters).');
+    if (placeholder.length > 200) return fail('Placeholder is too long (max 200 characters).');
+
+    seen.add(id);
+    questions.push({
+      id,
+      label,
+      type: 'text',
+      required: q.required === true,
+      ...(placeholder ? { placeholder } : {}),
+    });
+  }
+
+  // Only the questions column (plus updatedAt) is written
   const { error } = await supabase.from('RecruitmentForm').update({
-    title, description, nameLabel, courseLabel, yearLabel, updatedAt: new Date().toISOString(),
+    questions, updatedAt: new Date().toISOString(),
   }).eq('Cluster', requested).select('Cluster').single();
-  if (error) return { error: 'Could not save the form. Try again.', saved: false };
+  if (error) return fail('Could not save the questions. Try again.');
+
   revalidatePath('/admin/recruitment');
   revalidatePath('/admin/recruitment/form');
   revalidatePath('/events/recruitment/apply');

@@ -48,3 +48,22 @@ export function recruitmentClusterForTitle(title: string): RecruitmentCluster | 
 export function isCourseValue(value: string): value is CourseValue {
   return COURSE_OPTIONS.some((course) => course.value === value);
 }
+
+export type RecruitmentQuestion = {
+  id: string; // stable key, used as the JSON key in answers
+  label: string;
+  type: 'text'; // later: 'select' | 'radio' | 'checkbox' ...
+  required?: boolean;
+  placeholder?: string;
+};
+export function parseQuestions(value: unknown): RecruitmentQuestion[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (q): q is RecruitmentQuestion =>
+      !!q &&
+      typeof q === 'object' &&
+      typeof (q as any).id === 'string' &&
+      typeof (q as any).label === 'string'
+  );
+}
+

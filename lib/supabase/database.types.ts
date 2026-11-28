@@ -104,6 +104,7 @@ export type Database = {
           yearLabel: string
           isOpen: boolean
           updatedAt: string
+          questions: Json | null
         }
         Insert: {
           Cluster: string
@@ -115,6 +116,7 @@ export type Database = {
           yearLabel?: string
           isOpen?: boolean
           updatedAt?: string
+          questions?: Json | null
         }
         Update: {
           Cluster?: string
@@ -126,6 +128,7 @@ export type Database = {
           yearLabel?: string
           isOpen?: boolean
           updatedAt?: string
+          questions?: Json | null  
         }
         Relationships: []
       }
@@ -138,6 +141,7 @@ export type Database = {
           course: string
           year: number
           submittedAt: string
+          answers: Json | null
         }
         Insert: {
           id?: string
@@ -147,6 +151,7 @@ export type Database = {
           course: string
           year: number
           submittedAt?: string
+          answers?: Json | null
         }
         Update: {
           id?: string
@@ -156,6 +161,7 @@ export type Database = {
           course?: string
           year?: number
           submittedAt?: string
+          answers?: Json | null
         }
         Relationships: [
           {
